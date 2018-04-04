@@ -1,0 +1,216 @@
+class neutron_controller{
+	$command1="GRANT ALL PRIVILEGES ON neutron.* TO 'neutron'@'localhost' IDENTIFIED BY 'neutron_dbpass'"
+	$command2="GRANT ALL PRIVILEGES ON neutron.* TO 'neutron'@'%' IDENTIFIED BY 'neutron_dbpass'"
+	exec{"create a new database neutron":
+		path=>"/usr/bin:/usr/sbin:/bin",
+		command=>"mysql -u root -e 'create database neutron' ",
+	}
+	exec{"grant all privileges to 'neutron'@'localhost'":
+		path=>"/usr/bin:/usr/sbin:/bin",
+		command=>'mysql -u root -e "$command1"',
+	}
+	exec{"grant all privileges to 'neutron'@'%'":
+		path=>"/usr/bin:/usr/sbin:/bin",
+		command=>'mysql -u root -e "$command2"',
+	}
+	file{"/etc/neutron.sh":
+		ensure=>file,
+		source=>"puppet://puppetmaster/files/neutron.sh",
+	}
+	exec{"sh /etc/neutron.sh":
+		path=>"/usr/bin:/usr/sbin:/bin",
+		command=>'sh /etc/neutron.sh',
+	}
+	package{"openstack-neutron":
+		ensure=>installed,
+		provider=>"yum",
+	}
+	package{"openstack-neutron-ml2":
+		ensure=>installed,
+		provider=>"yum",
+	}
+	package{"openstack-neutron":
+		ensure=>installed,
+		provider=>"yum",
+	}
+	package{"ebtables":
+		ensure=>installed,
+		provider=>"yum",
+	}
+	file_line{"add connection to /etc/neutron/neutron.conf":
+		path=>"/etc/neutron/neutron.conf",
+		match=>"^\[database\]$",
+		line=>"[database]\nconnection=mysql+pymysql://neutron:neutron_dbpass@puppetmaster/neutron",
+	}
+	file_line{"add message to [DEFAULT]":
+		path=>"/etc/neutron/neutron.conf",
+		match=>"^\[DEFAULT\]$",
+		line=>"[DEFAULT]\ncore_plugin = ml2\nservice_plugins = router\nallow_overlapping_ips = True\nrpc_backend = rabbit\nauth_strategy = keystone\nnotify_nova_on_port_status_changes = True\nnotify_nova_on_port_data_changes = True",
+	}
+	file_line{"add message to [oslo_messaging_rabbit]":
+		path=>"/etc/neutron/neutron.conf",
+		match=>"^\[oslo\_messaging\_rabbit\]$",
+		line=>"[oslo_messaging_rabbit]\nrabbit_host = controller\nrabbit_userid = openstack\nrabbit_password = RABBIT_PASS",
+	}
+	file_line{"add message to [keystone_authtoken]":
+		path=>"/etc/neutron/neutron.conf",
+		match=>"^\[keystone\_authtoken\]$",
+		line=>"[keystone_authtoken]
+		\nauth_uri = http://controller:5000
+		\nauth_url = http://controller:35357
+		\nmemcached_servers = controller:11211
+		\nauth_type = password
+		\nproject_domain_name = default
+		\nuser_domain_name = default
+		\nproject_name = service
+		\nusername = neutron
+		\npassword = neutron",
+	}
+	file_line{"add message to [nova]":
+		path=>"/etc/neutron/neutron.conf",
+		match=>"^\[nova\]$",
+		line=>"[nova]
+		\nauth_url = http://controller:35357
+		\nauth_type = password
+		\nproject_domain_name = default
+		\nuser_domain_name = default
+		\nregion_name = RegionOne
+		\nproject_name = service
+		\nusername = nova
+		\npassword = nova",
+	}
+	file_line{"add message to [oslo_concurrency]":
+		path=>"/etc/neutron/neutron.conf",
+		match=>"^\[oslo\_concurrency\]$",
+		line=>"[oslo_concurrency]
+		\nlock_path = /var/lib/neutron/tmp",
+	}
+	file_line{"add message to /etc/neutron/plugins/ml2/ml2_conf.ini [ml2]":
+		path=>"/etc/neutron/plugins/ml2/ml2_conf.ini",
+		match=>"^\[ml2\]$",
+		line=>"[ml2]
+		\ntype_drivers = flat,vlan,vxlan
+		\ntenant_network_types = vxlan
+		\nmechanism_drivers = linuxbridge,l2population
+		\nextension_drivers = port_security",
+	}
+	file_line{"add message to [ml2_type_flat]":
+		path=>"/etc/neutron/plugins/ml2/ml2_conf.ini",
+		match=>"^\[ml2\_type\_flat\]$",
+		line=>"[ml2_type_flat]
+		\nflat_networks = provider",
+	}
+	file_line{"add message to [ml2_type_vxlan]":
+		path=>"/etc/neutron/plugins/ml2/ml2_conf.ini",
+		match=>"^\[ml2\_type\_vxlan\]$",
+		line=>"[ml2_type_vxlan]
+		\nvni_ranges = 1:1000",
+	}
+	file_line{"add message to [securitygroup]":
+		path=>"/etc/neutron/plugins/ml2/ml2_conf.ini",
+		match=>"^\[securitygroup\]$",
+		line=>"[securitygroup]
+		\nenable_ipset = True",
+	}
+	file_line{"add message to /etc/neutron/plugins/ml2/linuxbridge_agent.ini":
+		path=>"/etc/neutron/plugins/ml2/linuxbridge_agent.ini",
+		match=>"^\[linux\_bridge\]$",
+		line=>"[linux_bridge]
+		\nphysical_interface_mappings = provider:PROVIDER_INTERFACE_NAME",#将``PUBLIC_INTERFACE_NAME`` 替换为底层的物理公共网络接口
+	}
+	file_line{"add message to [vxlan]":
+		path=>"/etc/neutron/plugins/ml2/linuxbridge_agent.ini",
+		match=>"^\[vxlan\]$",
+		line=>"[vxlan]
+		\nenable_vxlan = True
+		\nlocal_ip = OVERLAY_INTERFACE_IP_ADDRESS
+		\nl2_population = True",#将``OVERLAY_INTERFACE_IP_ADDRESS`` 替换为处理覆盖网络的底层物理网络接口的IP地址
+	}
+	file_line{"add message to [securitygroup]":
+		path=>"/etc/neutron/plugins/ml2/linuxbridge_agent.ini",
+		match=>"^\[securitygroup\]$",
+		line=>"[securitygroup]
+		\nenable_security_group = True
+		\nfirewall_driver = neutron.agent.linux.iptables_firewall.IptablesFirewallDriver",
+	}
+	file_line{"add message to /etc/neutron/l3_agent.ini":
+		path=>"/etc/neutron/l3_agent.ini",
+		match=>"^\[DEFAULT\]$",
+		line=>"[DEFAULT]
+		\ninterface_driver = neutron.agent.linux.interface.BridgeInterfaceDriver
+		\nexternal_network_bridge =",
+	}
+	file_line{"add message to /etc/neutron/dhcp_agent.ini":
+		path=>"/etc/neutron/dhcp_agent.ini",
+		match=>"^\[DEFAULT\]$",
+		line=>"[DEFAULT]
+		\ninterface_driver = neutron.agent.linux.interface.BridgeInterfaceDriver
+		\ndhcp_driver = neutron.agent.linux.dhcp.Dnsmasq
+		\nenable_isolated_metadata = True",
+	}
+	file_line{"add message to /etc/neutron/metadata_agent.ini":
+		path=>"/etc/neutron/metadata_agent.ini",
+		match=>"^\[DEFAULT\]$",
+		line=>"[DEFAULT]
+		\nnova_metadata_ip = puppetmaster
+		\nmetadata_proxy_shared_secret = METADATA_SECRET",#用你为元数据代理设置的密码替换 METADATA_SECRET。
+	}
+	file_line{"add message to /etc/nova/nova.conf":
+		path=>"/etc/nova/nova.conf",
+		match=>"^\[neutron\]$",
+		line=>"[neutron]
+		\nurl = http://puppetmaster:9696
+		\nauth_url = http://puppetmaster:35357
+		\nauth_type = password
+		\nproject_domain_name = default
+		\nuser_domain_name = default
+		\nregion_name = RegionOne
+		\nproject_name = service
+		\nusername = neutron
+		\npassword = neutron
+		\nservice_metadata_proxy = True
+		\nmetadata_proxy_shared_secret = METADATA_SECRET",#使用你为元数据代理设置的密码替换``METADATA_SECRET``
+	}
+	exec{"网络服务初始化脚本需要一个超链接 /etc/neutron/plugin.ini``指向ML2插件配置文件/etc/neutron/plugins/ml2/ml2_conf.ini``。如果超链接不存在，使用下面的命令创建它":
+		path=>"/usr/bin:/usr/sbin:/bin",
+		command=>"ln -s /etc/neutron/plugins/ml2/ml2_conf.ini /etc/neutron/plugin.ini",
+	}
+	exec{"同步数据库":
+		path=>"/usr/sbin:/usr/bin:/bin",
+		command=>"su -s /bin/sh -c "neutron-db-manage --config-file /etc/neutron/neutron.conf --config-file /etc/neutron/plugins/ml2/ml2_conf.ini upgrade head" neutron",
+	}
+	exec{"重启api":
+		path=>"/usr/bin:/usr/sbin:/bin",
+		command=>"systemctl restart openstack-nova-api.service",
+	}
+	service{"neutron-server":
+		ensure=>"running",
+		enable=>true,
+		hastatus=>true,
+		hasrestart=>true,
+	}
+	service{"neutron-linuxbridge-agent":
+		ensure=>"running",
+		enable=>true,
+		hastatus=>true,
+		hasrestart=>true,
+	}
+	service{"neutron-dhcp-agent":
+		ensure=>"running",
+		enable=>true,
+		hastatus=>true,
+		hasrestart=>true,
+	}
+	service{"neutron-metadata-agent":
+		ensure=>"running",
+		enable=>true,
+		hastatus=>true,
+		hasrestart=>true,
+	}
+	service{"neutron-l3-agent":
+		ensure=>"running",
+		enable=>true,
+		hastatus=>true,
+		hasrestart=>true,
+	}
+}

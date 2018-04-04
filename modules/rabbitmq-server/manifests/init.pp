@@ -1,0 +1,21 @@
+class rabbitmq-server {
+	package {"rabbitmq-server":
+		provider=>"yum",
+		ensure=>installed,
+	}
+	service {"rabbitmq-server":
+		ensure=>running,
+		hasstatus=>true,
+		hasrestart=>true,
+	}
+	exec {"add rabbit user":
+		command=>"rabbitmqctl add_user openstack RABBIT_PASS",
+		path=>"/usr/bin:/usr/sbin:/bin",
+	}
+	exec {"set_permissions":
+		command=>'rabbitmqctl set_permissios openstack ".*" ".*" ".*" ',
+		path=>"/usr/bin:/usr/sbin:/bin",
+		provider=>shell,
+	}
+	Package['rabbitmq-server']->Service['rabbitmq-server']->Exec['add rabbit user']->Exec['set_permissions']
+}

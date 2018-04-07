@@ -1,0 +1,38 @@
+# CentOS-OpenStack-newton.repo
+#
+# Please see http://wiki.centos.org/SpecialInterestGroup/Cloud for more
+# information
+
+[centos-openstack-newton]
+name=CentOS-7 - OpenStack newton
+#baseurl=http://mirror.centos.org/centos/7/cloud/$basearch/openstack-newton/
+baseurl=file:///tmp/7/centos-openstack-newton/
+gpgcheck=1
+enabled=1
+gpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-CentOS-SIG-Cloud
+
+[centos-openstack-newton-test]
+name=CentOS-7 - OpenStack newton Testing
+baseurl=http://buildlogs.centos.org/centos/7/cloud/$basearch/openstack-newton/
+gpgcheck=0
+enabled=0
+
+[centos-openstack-newton-debuginfo]
+name=CentOS-7 - OpenStack newton - Debug
+baseurl=http://debuginfo.centos.org/centos/7/cloud/$basearch/
+gpgcheck=1
+enabled=0
+gpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-CentOS-SIG-Cloud
+
+[centos-openstack-newton-source]
+name=CentOS-7 - OpenStack newton - Source
+baseurl=http://vault.centos.org/centos/7/cloud/Source/openstack-newton/
+gpgcheck=1
+enabled=0
+gpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-CentOS-SIG-Cloud
+
+[rdo-trunk-newton-tested]
+name=OpenStack newton Trunk Tested
+baseurl=http://buildlogs.centos.org/centos/7/cloud/$basearch/rdo-trunk-newton-tested/
+gpgcheck=0
+enabled=0

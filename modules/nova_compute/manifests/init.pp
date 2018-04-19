@@ -40,7 +40,7 @@ class nova_compute{
 		match=>"^\[vnc\]$",
 		line=>'[vnc]
 		\nenabled=True
-		\nvncserver_listen=$my_ip
+		\nvncserver_listen=0.0.0.0
 		\nvncserver_proxyclient_address=$my_ip
 		\nnovncproxy_base_url=http://puppetmaster:6000/vnc_auto.html',
 	}
@@ -56,7 +56,21 @@ class nova_compute{
 		line=>"[oslo_concurrency]
 		\nlock_path=/var/lib/nova/tmp",
 	}
-	
+	file_line{"add placement":
+		path=>"/etc/nova/nova.conf",
+		match=>"^\[placement\]$",
+		line=>"[placement]
+		\nauth_uri = http://controller:5000
+		\nauth_url = http://controller:35357
+		\nmemcached_servers = controller:11211
+		\nauth_type = password
+		\nproject_domain_name = default
+		\nuser_domain_name = default
+		\nproject_name = service
+		\nusername = placement
+		\npassword = placement
+		\nos_region_name = RegionOne",
+	}
 	service{"openstack-nova-compute":
 		ensure=>"running",
 		enable=>true,
@@ -71,6 +85,6 @@ class nova_compute{
 	}
 	Package['openstack-nova-compute']->File_line['add Default']->File_line['add message to [oslo_messageing_rabbit]']->
 	File_line['add message to [keystone_authtoken]']->File_line['add message [vnc]']->File_line['add message [glance]']->
-	File_line['oslo_concurrency']->Service['openstack-nova-compute']->Service['libvirtd']
+	File_line['oslo_concurrency']->File_line['add placement']->Service['openstack-nova-compute']->Service['libvirtd']
 
 }

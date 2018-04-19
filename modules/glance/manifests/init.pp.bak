@@ -32,7 +32,7 @@ class glance{
 		path=>"/etc/glance/glance-api.conf",
 		match=>"^\[keystone\_authtoken\]$",
 		line=>"[keystone_authtoken]
-		\nauthuri=http://puppetmaster:5000
+		\nauth_uri=http://puppetmaster:5000
 		\nauth_url=http://puppetmaster:35357
 		\nmemcached_servers=puppetmaster:11211
 		\nauth_type=password
@@ -52,7 +52,7 @@ class glance{
 		path=>"/etc/glance/glance-api.conf",
 		match=>"\[glance\_store\]$",
 		line=>"[glance_store]
-		\nstore=file,http
+		\nstores=file,http
 		\ndefault_store=file
 		\nfilesystem_store_datadir=/var/lib/glance/images/",
 	}
@@ -96,5 +96,9 @@ class glance{
 		hasstatus=>true,
 		hasrestart=>true,
 	}
-	File['/etc/mypuppet/glance.sql']->Exec['create new database glance']->File['/etc/mypuppet/glance.sh']->Exec['sh glance.sh']->Package['openstack-glance']->File_line['add connection']->File_line['rewirte keystone_authtoken']->File_line['add flavor to [paste_deploy]']->File_line['rewrite glance_store']->File_line['add connection to glance-registry.conf']->File_line['rewrite keystone_authtoken']->File_line['add flavor to paste_deploy']->Exec['add glance database']->Service['openstack-glance-api']->Service['openstack-glance-registry']
+	File['/etc/mypuppet/glance.sql']->Exec['create new database glance']->File['/etc/mypuppet/glance.sh']->
+	Exec['sh glance.sh']->Package['openstack-glance']->File_line['add connection']->
+	File_line['rewirte keystone_authtoken']->File_line['add flavor to [paste_deploy]']->File_line['rewrite glance_store']->
+	File_line['add connection to glance-registry.conf']->File_line['rewrite keystone_authtoken']->File_line['add flavor to paste_deploy']->
+	Exec['add glance database']->Service['openstack-glance-api']->Service['openstack-glance-registry']
 }

@@ -69,7 +69,9 @@ class cinder_controller{
 	}
 	file_line{"add cinder message to nova.conf":
 		path=>"/etc/nova/nova.conf",
-		line=>"[cinder]\nos_region_name = RegionOne",
+		match=>"^\[cinder\]$"
+		line=>"[cinder]\n
+		os_region_name = RegionOne",
 	}
 	exec{"restart openstack-nova-api":
 		path=>"/usr/bin:/usr/sbin:/bin",

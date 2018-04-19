@@ -69,6 +69,7 @@ class cinder_controller{
 	}
 	file_line{"add cinder message to nova.conf":
 		path=>"/etc/nova/nova.conf",
+		match=>"^\[cinder\]$"
 		line=>"[cinder]\nos_region_name = RegionOne",
 	}
 	exec{"restart openstack-nova-api":
@@ -88,12 +89,9 @@ class cinder_controller{
 		hasstatus=>true,
 		hasrestart=>true,
 	}
-	#File['/etc/mypuppet/cinder.sql']->Exec['create new database cinder']->File['/etc/mypuppet/cinder.sh']->
-	#Exec['sh cinder.sh']->
-#	Package['openstack-cinder']->
-#File_line['add connection to cinder.conf [database]']->
-#	File_line['add messages to cinder.conf [DEFAULT]']->File_line['add message to cinder.conf [oslo_messaging_rabbit]']->File_line['add message to cinder.conf [keystone_authtoken]']->
-#	File_line['add message to cinder.conf [oslo_concurrency]']->Exec['cinder-manage db sync']->
-File_line['add cinder message to nova.conf']->
+	File['/etc/mypuppet/cinder.sql']->Exec['create new database cinder']->File['/etc/mypuppet/cinder.sh']->
+	Exec['sh cinder.sh']->Package['openstack-cinder']->File_line['add connection to cinder.conf [database]']->
+  File_line['add messages to cinder.conf [DEFAULT]']->File_line['add message to cinder.conf [oslo_messaging_rabbit]']->File_line['add message to cinder.conf [keystone_authtoken]']->
+  File_line['add message to cinder.conf [oslo_concurrency]']->Exec['cinder-manage db sync']->File_line['add cinder message to nova.conf']->
 	Exec['restart openstack-nova-api']->Service['openstack-cinder-api']->Service['openstack-cinder-scheduler']
 }
